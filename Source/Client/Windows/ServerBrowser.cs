@@ -6,7 +6,6 @@ using RimWorld;
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -17,7 +16,6 @@ using UnityEngine;
 using Verse;
 using Verse.Steam;
 using Harmony;
-using zip::Ionic.Zip;
 
 namespace Multiplayer.Client
 {
@@ -123,7 +121,7 @@ namespace Multiplayer.Client
             {
                 var displayName = Path.ChangeExtension(file.FullName.Substring(Multiplayer.ReplaysDir.Length + 1), null);
                 var saveFile = new SaveFile(displayName, true, file);
-                
+
                 try
                 {
                     var replay = Replay.ForLoading(file);
@@ -299,7 +297,7 @@ namespace Multiplayer.Client
 
             width += 120;
         }
-        
+
         private static void CheckGameVersionAndMods(SaveFile file, Action action)
         {
             ScribeMetaHeaderUtility.lastMode = ScribeMetaHeaderUtility.ScribeHeaderMode.Map;
@@ -359,7 +357,7 @@ namespace Multiplayer.Client
                 else
                 {
                     GUI.color = saveFile.VersionColor;
-                    Widgets.Label(infoText.Down(16), (saveFile.rwVersion ?? "???").Truncate(110));                        
+                    Widgets.Label(infoText.Down(16), (saveFile.rwVersion ?? "???").Truncate(110));
                 }
 
                 if (!saveFile.Valid)
@@ -393,7 +391,7 @@ namespace Multiplayer.Client
                 {
                     if (Event.current.button == 0)
                         selectedFile = saveFile;
-                    else if(saveFile.Valid)
+                    else if (saveFile.Valid)
                         Find.WindowStack.Add(new FloatMenu(SaveFloatMenu(saveFile).ToList()));
                 }
 
@@ -538,17 +536,18 @@ namespace Multiplayer.Client
             if (Widgets.ButtonText(new Rect(inRect.center.x - btnWidth / 2, 60f, btnWidth, 35f), "MpConnectButton".Translate()))
             {
                 string addr = MultiplayerMod.settings.serverAddress.Trim();
+                string host = addr;
                 int port = MultiplayerServer.DefaultPort;
-                string[] hostport = addr.Split(':');
-                if (hostport.Length == 2)
-                    int.TryParse(hostport[1], out port);
-                else
-                    port = MultiplayerServer.DefaultPort;
 
                 Log.Message("Connecting directly");
                 try
                 {
-                    Find.WindowStack.Add(new ConnectingWindow(hostport[0], port) { returnToServerBrowser = true });
+                    if (!AddressParser.TryParseAddress(addr, out host, out port))
+                    {
+                        throw new Exception($"Invalid address \"{addr}\"");
+                    }
+
+                    Find.WindowStack.Add(new ConnectingWindow(host, port) { returnToServerBrowser = true });
                     MultiplayerMod.settings.Write();
                     Close(false);
                 }

@@ -4,8 +4,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Multiplayer.Common
 {
@@ -576,4 +578,48 @@ namespace Multiplayer.Common
         }
     }
 
+    public static class AddressParser
+    {
+        static Regex v6 = new Regex(@"^(?<ip1>[0-9a-f:]+)|\[(?<ip2>[0-9a-f:]+)\]:(?<port>\d+)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        public static bool TryParseAddress(string input, out string addr, out int port)
+        {
+            addr = "";
+            port = MultiplayerServer.DefaultPort;
+
+            switch (input.Count(c => c == ':'))
+            {
+                case 0: // IPv4 or HOST
+                    return true;
+
+                case 1: // IPv4:PORT or HOST:PORT
+                    string[] hostport = input.Split(':');
+                    if (hostport.Length != 2 || !int.TryParse(hostport[1], out port))
+                    {
+                        return false;
+                    }
+
+                    addr = hostport[0];
+                    return true;
+
+                default: // IPv6 or [IPv6]:PORT
+                    var m = v6.Match(input);
+
+                    if (m.Groups["ip1"].Success)
+                    {
+                        addr = m.Groups["ip1"].Value;
+                        return true;
+                    }
+
+                    if (m.Groups["ip2"].Success)
+                    {
+                        addr = m.Groups["ip2"].Value;
+                        var portValue = m.Groups["port"].Value;
+                        return int.TryParse(portValue, out port);
+                    }
+
+                    return false;
+            }
+        }
+    }
 }
